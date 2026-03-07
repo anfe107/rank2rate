@@ -16,14 +16,11 @@ const router = createRouter({
   routes,
 })
 
-// Navigation Guard: Auth-Routen → /login wenn kein Token
-router.beforeEach((to, _from, next) => {
+// Navigation Guard
+router.beforeEach((to) => {
   const token = localStorage.getItem('token')
-  if (to.meta.requiresAuth && !token) {
-    next('/login')
-  } else {
-    next()
-  }
+  if (to.meta.requiresAuth && !token) return '/login'
+  if (to.path === '/login' && token) return '/dashboard'
 })
 
 export default router
