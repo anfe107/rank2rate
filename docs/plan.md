@@ -94,7 +94,7 @@ Begründung: Die Triangulations-Ansicht (Sprint 3+) benötigt mehrere Methoden p
 
 ### Frontend – Reihung: Drag & Drop Gruppierung
 
-> **SortableJS + Vue: Pflichtregeln** (Details: [`LessonsLearned-SortableJS-Vue.md`](LessonsLearned-SortableJS-Vue.md))
+> **SortableJS + Vue: Pflichtregeln** (Details: [`lessons-learned-sortablejs-vue.md`](lessons-learned-sortablejs-vue.md))
 >
 > 1. **`evt.item.remove()`** — nach jedem Cross-Container-Drop das DOM-Element entfernen, bevor Vue-State aktualisiert wird. Sonst Reconciliation-Konflikt (Items springen/doppeln).
 > 2. **Initialisierungs-Reihenfolge** — `loading = false` → `await nextTick()` → `initSortable()`. Nie Sortable vor dem DOM-Aufbau binden.
