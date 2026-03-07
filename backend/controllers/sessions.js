@@ -12,6 +12,17 @@ function shuffle(arr) {
   return a
 }
 
+export async function listSessions(req, res) {
+  const sessions = await Session.find({ teacherId: req.user.userId }).sort({ createdAt: -1 })
+  const withCounts = await Promise.all(
+    sessions.map(async s => ({
+      ...s.toObject(),
+      projectCount: await Project.countDocuments({ sessionId: s._id }),
+    }))
+  )
+  res.json(withCounts)
+}
+
 export async function createSession(req, res) {
   const { title, methods, anonymized, projects: projectsData } = req.body
 
