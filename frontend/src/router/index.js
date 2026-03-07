@@ -5,6 +5,7 @@ const routes = [
   { path: '/register',                component: () => import('../views/RegisterView.vue') },
   { path: '/dashboard',               component: () => import('../views/DashboardView.vue'),      meta: { requiresAuth: true } },
   { path: '/sessions/new',            component: () => import('../views/SessionCreateView.vue'),  meta: { requiresAuth: true } },
+  { path: '/sessions/:id/grouping',   component: () => import('../views/DragDropEvaluateView.vue'), meta: { requiresAuth: true } },
   { path: '/sessions/:id',            component: () => import('../views/SessionManageView.vue'),  meta: { requiresAuth: true } },
   { path: '/sessions/:id/results',    component: () => import('../views/SessionResultsView.vue'), meta: { requiresAuth: true } },
   { path: '/session/:id',             component: () => import('../views/StudentSessionView.vue') },

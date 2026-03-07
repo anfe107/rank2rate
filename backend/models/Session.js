@@ -8,6 +8,7 @@ const sessionSchema = new mongoose.Schema({
     required: true,
     validate: { validator: v => v.length >= 1, message: 'Mindestens eine Methode erforderlich' },
   },
+  groupCount: { type: Number, default: 3 },
   anonymized: { type: Boolean, default: false },
   status: { type: String, enum: ['draft', 'active', 'ranked', 'graded'], default: 'draft' },
   groupingResult: { type: mongoose.Schema.Types.Mixed },

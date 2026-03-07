@@ -9,6 +9,7 @@ function makeRouter() {
     history: createMemoryHistory(),
     routes: [
       { path: '/sessions/new', component: SessionCreateView },
+      { path: '/sessions/:id/grouping', component: { template: '<div>DragDrop</div>' } },
       { path: '/sessions/:id', component: { template: '<div>Manage</div>' } },
       { path: '/login', component: { template: '<div>Login</div>' } },
     ],
@@ -102,7 +103,7 @@ it('SC5: Formular abschicken → API-Call, Weiterleitung zu SessionManageView', 
   await wrapper.find('button[data-testid="submit"]').trigger('click')
   await flushPromises()
   expect(global.fetch).toHaveBeenCalledOnce()
-  expect(wrapper.vm.$router.currentRoute.value.path).toBe('/sessions/abc123')
+  expect(wrapper.vm.$router.currentRoute.value.path).toBe('/sessions/abc123/grouping')
 })
 
 // SC6: API-Fehler → Fehlermeldung sichtbar

@@ -175,7 +175,7 @@ async function submit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message ?? 'Fehler beim Erstellen')
-    router.push(`/sessions/${data.session._id}`)
+    router.push(`/sessions/${data.session._id}/grouping`)
   } catch (e) {
     error.value = e.message
   } finally {

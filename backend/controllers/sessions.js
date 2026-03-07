@@ -22,10 +22,12 @@ export async function createSession(req, res) {
     return res.status(400).json({ message: 'Mindestens 3 Abgaben erforderlich' })
   }
 
+  const { groupCount } = req.body
   const session = await Session.create({
     teacherId: req.user.userId,
     title,
     methods,
+    groupCount: groupCount || 3,
     anonymized: anonymized || false,
   })
 
