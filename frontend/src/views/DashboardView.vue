@@ -127,7 +127,7 @@ const STATUS_LABELS = {
   draft: 'Entwurf',
   active: 'Abstimmung läuft',
   ranked: 'Reihung abgeschlossen',
-  graded: 'Benotet',
+  graded: 'Noten festgelegt',
 }
 
 function statusLabel(status) {

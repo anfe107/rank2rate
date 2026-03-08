@@ -145,7 +145,7 @@ Nach Registrierung: Weiterleitung auf `/login` mit Erfolgsmeldung.
 │  │ Referate Klasse 11b         │    │
 │  │ D&D + Paarvergleich · 6 Ab. │    │
 │  │ 01.03.2026                  │    │
-│  │ Status: Benotet ✓           │    │
+│  │ Status: Noten festgelegt ✓   │    │
 │  │ [Verwalten]  [Ergebnisse]   │    │
 │  └─────────────────────────────┘    │
 │                                     │
@@ -157,8 +157,8 @@ Session-Karte zeigt: Titel, Methode(n), Abgabenanzahl, Datum, Status, kontextabh
 **Status-Werte** (DB-Enum → UI-Label):
 - `draft` → Entwurf
 - `active` → Abstimmung läuft (nur bei Peer-Review/Dot Voting)
-- `ranked` → Reihung abgeschlossen
-- `graded` → Benotet ✓
+- `ranked` → Reihung abgeschlossen (kann Endzustand sein)
+- `graded` → Noten festgelegt ✓
 
 Solo-Lehrer-Sessions überspringen `active` (kein asynchroner Voting-Prozess).
 
@@ -324,7 +324,7 @@ Klarnamen-Toggle ist pro Abgabe unabhängig schaltbar und nicht persistent (beim
 │ ← Session verwalten                 │
 │  Reihungsergebnis                   │
 ├─────────────────────────────────────┤
-│  [Reihung]  [Benotung]              │
+│  [Reihung]  [Notenvorschlag]        │
 │   ▔▔▔▔▔▔▔                           │
 ├─────────────────────────────────────┤
 │                                     │
@@ -357,9 +357,20 @@ Klarnamen-Toggle ist pro Abgabe unabhängig schaltbar und nicht persistent (beim
 │  [Klarnamen anzeigen]               │
 │                                     │
 ├─────────────────────────────────────┤
-│       [Jetzt benoten →]             │
+│  [Reihung abschließen]              │
+│   Ranking als Ergebnis speichern    │
+│                                     │
+│  ── oder ──                         │
+│                                     │
+│  [Noten ableiten →]                 │
+│   Ranking in Notenvorschläge        │
+│   überführen                        │
 └─────────────────────────────────────┘
 ```
+
+„Reihung abschließen" belässt den Status bei `ranked` — das Ranking ist das Endergebnis. Sinnvoll für formative Bewertung, Feedback-Runden, Präsentationsreihenfolgen.
+
+„Noten ableiten" betont den abgeleiteten, konstruierten Charakter der Notenberechnung.
 
 ### Schritt 1b — Reihungsergebnis: Paarweiser Vergleich
 
@@ -368,7 +379,7 @@ Klarnamen-Toggle ist pro Abgabe unabhängig schaltbar und nicht persistent (beim
 │ ← Session verwalten                 │
 │  Reihungsergebnis                   │
 ├─────────────────────────────────────┤
-│  [Reihung]  [Benotung]              │
+│  [Reihung]  [Notenvorschlag]        │
 │   ▔▔▔▔▔▔▔                           │
 ├─────────────────────────────────────┤
 │                                     │
@@ -386,7 +397,14 @@ Klarnamen-Toggle ist pro Abgabe unabhängig schaltbar und nicht persistent (beim
 │  [Klarnamen anzeigen]               │
 │                                     │
 ├─────────────────────────────────────┤
-│       [Jetzt benoten →]             │
+│  [Reihung abschließen]              │
+│   Ranking als Ergebnis speichern    │
+│                                     │
+│  ── oder ──                         │
+│                                     │
+│  [Noten ableiten →]                 │
+│   Ranking in Notenvorschläge        │
+│   überführen                        │
 └─────────────────────────────────────┘
 ```
 
@@ -398,15 +416,15 @@ Wenn mehrere Verfahren abgeschlossen sind, erscheint anstelle von "Jetzt benoten
 
 ---
 
-### Schritt 2 — Benotung
+### Schritt 2 — Notenvorschlag
 
 ```
 ┌─────────────────────────────────────┐
 │ ← Reihungsergebnis                  │
-│  Benotung                           │
+│  Notenvorschlag                     │
 ├─────────────────────────────────────┤
-│  [Reihung]       [Benotung]         │
-│                   ▔▔▔▔▔▔▔▔          │
+│  [Reihung]     [Notenvorschlag]     │
+│                 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔     │
 ├─────────────────────────────────────┤
 │                                     │
 │  Notensystem                        │
@@ -422,55 +440,73 @@ Wenn mehrere Verfahren abgeschlossen sind, erscheint anstelle von "Jetzt benoten
 ├─────────────────────────────────────┤
 │  Vorschau                           │
 │                                     │
-│  Note 1  ClumsyGoldenDragon         │
-│  Note 2  WiseMightyPhoenix          │
-│          GrumpyTinyWizard        ←  │ Gleichstand → bessere Note
-│  Note 3  SleepyBraveTroll           │
-│  Note 4  BoldSilverFox              │
-│  Note 5  SwiftDarkWolf              │
-│          LazyCrimsonBear         ←  │ Gleichstand
-│  Note 6  CleverTinyOwl              │
+│  Vorschlag: 1  ClumsyGoldenDragon   │
+│  Vorschlag: 2  WiseMightyPhoenix    │
+│               GrumpyTinyWizard   ←  │ Gleichstand → bessere Note
+│  Vorschlag: 3  SleepyBraveTroll     │
+│  Vorschlag: 4  BoldSilverFox        │
+│  Vorschlag: 5  SwiftDarkWolf        │
+│               LazyCrimsonBear    ←  │ Gleichstand
+│  Vorschlag: 6  CleverTinyOwl        │
 │                                     │
 │  Tippe auf eine Note zum Ändern     │
 │                                     │
 ├─────────────────────────────────────┤
-│       [Benotung speichern]          │
+│  Notiz zur Benotung (optional)      │
+│  ┌─────────────────────────────┐    │
+│  │ z.B. "Klasse insgesamt      │    │
+│  │ schwach, Noten angehoben"   │    │
+│  └─────────────────────────────┘    │
+│                                     │
+│  ☐ Ich habe die vorgeschlagene      │
+│    Notenverteilung geprüft und      │
+│    halte sie für angemessen.        │
+│                                     │
+│  [Noten übernehmen]  ← disabled     │
+│         bis ☐ angehakt ODER         │
+│         mind. 1 Note geändert       │
 └─────────────────────────────────────┘
 ```
 
 Vorschau aktualisiert sich sofort bei Änderung von Notensystem oder Verteilungsmethode.
 
-### Benotung — manuelle Note überschreiben
+Die Checkbox entfällt automatisch, sobald der Lehrer mindestens eine Note manuell geändert hat — die manuelle Änderung selbst ist Ausdruck der Reflexion.
+
+Die Kontextnotiz wird im `ratingResult.note` gespeichert und ist in der Abschlussansicht sowie bei späterem Aufruf sichtbar.
+
+### Notenvorschlag — manuelle Note überschreiben
 
 ```
-│  Note 3  SleepyBraveTroll     [3 ▼] │
-│          ╔═══════════════════╗       │
-│          ║  1 · 2 · 3 · 4   ║       │
-│          ║      •            ║       │ (aktuell: 3)
-│          ╚═══════════════════╝       │
+│  Vorschlag: 3  SleepyBraveTroll  [3 ▼] │
+│             ╔═══════════════════╗       │
+│             ║  1 · 2 · 3 · 4   ║       │
+│             ║      •            ║       │ (aktuell: 3)
+│             ╚═══════════════════╝       │
 ```
 
-### Benotung — nach manueller Änderung
+### Notenvorschlag — nach manueller Änderung
 
 ```
-│  Note 1  ClumsyGoldenDragon         │
-│  Note 2  WiseMightyPhoenix          │
-│          GrumpyTinyWizard           │
-│  Note 2  SleepyBraveTroll  ✎       │ ← manuell geändert (war Note 3)
-│  Note 4  BoldSilverFox              │
-│  Note 5  SwiftDarkWolf              │
-│          LazyCrimsonBear            │
-│  Note 6  CleverTinyOwl              │
+│  Vorschlag: 1  ClumsyGoldenDragon      │
+│  Vorschlag: 2  WiseMightyPhoenix       │
+│                GrumpyTinyWizard        │
+│  Note: 2       SleepyBraveTroll  ✎    │ ← manuell geändert (war Vorschlag: 3)
+│  Vorschlag: 4  BoldSilverFox           │
+│  Vorschlag: 5  SwiftDarkWolf           │
+│                LazyCrimsonBear         │
+│  Vorschlag: 6  CleverTinyOwl           │
 ```
 
-`✎` markiert manuell überschriebene Noten visuell (abweichender Farbton + Symbol). Speichern sichert sowohl berechnete als auch finale Note pro Abgabe im `ratingResult`.
+`✎` markiert manuell überschriebene Noten visuell (abweichender Farbton + Symbol). Unveränderte Noten bleiben als „Vorschlag" gekennzeichnet, manuell gesetzte als „Note". Speichern sichert sowohl berechnete als auch finale Note pro Abgabe im `ratingResult`.
 
-### Benotung — Abschlussansicht (nach Speichern)
+Sobald mindestens eine Note manuell geändert wurde, wird die Bestätigungs-Checkbox ausgeblendet und der Speichern-Button wird aktiv.
+
+### Abschlussansicht — Noten festgelegt (nach Speichern, Noten teilweise angepasst)
 
 ```
 ┌─────────────────────────────────────┐
 │ ← Dashboard                         │
-│  Benotung abgeschlossen ✓           │
+│  Noten festgelegt ✓                 │
 ├─────────────────────────────────────┤
 │                                     │
 │  Abgabe              Note  Status   │
@@ -486,11 +522,78 @@ Vorschau aktualisiert sich sofort bei Änderung von Notensystem oder Verteilungs
 │                                     │
 │  ✎ = manuell angepasst (1 Eintrag)  │
 │                                     │
+│  Notiz: "Klasse insgesamt schwach,  │
+│  Noten angehoben"                   │
+│                                     │
 │  [Klarnamen anzeigen]               │
 │  [Als CSV exportieren]  ← Sprint 2  │
 │                                     │
 └─────────────────────────────────────┘
 ```
+
+### Abschlussansicht — Noten festgelegt (nach Speichern, alle Noten unverändert)
+
+```
+┌─────────────────────────────────────┐
+│ ← Dashboard                         │
+│  Noten festgelegt ✓                 │
+├─────────────────────────────────────┤
+│                                     │
+│  Abgabe              Note  Status   │
+│  ─────────────────────────────────  │
+│  ClumsyGoldenDragon   1             │
+│  WiseMightyPhoenix    2             │
+│  GrumpyTinyWizard     3             │
+│  SleepyBraveTroll     4             │
+│  BoldSilverFox        5             │
+│                                     │
+│  ┌─────────────────────────────┐    │
+│  │ ℹ Alle Noten entsprechen    │    │
+│  │   dem Algorithmus-Vorschlag.│    │
+│  │   Bitte prüfen, ob die      │    │
+│  │   Verteilung der Klassen-   │    │
+│  │   leistung entspricht.      │    │
+│  └─────────────────────────────┘    │
+│                                     │
+│  [Klarnamen anzeigen]               │
+│  [Als CSV exportieren]  ← Sprint 2  │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+---
+
+### Perspektivenvergleich Lehrer/Peers (Sprint 2)
+
+Wenn sowohl Lehrer-Reihung als auch Schüler-Dot-Voting vorliegen, erscheint in der Reihungsansicht ein Perspektivenvergleich. Dieser dient als Diskussionsgrundlage — nicht als Korrektur.
+
+```
+┌─────────────────────────────────────┐
+│  Perspektivenvergleich              │
+│                                     │
+│  Abgabe              Lehrer  Peers  │
+│  ─────────────────────────────────  │
+│  ClumsyGoldenDragon   1.     3.    │  ← Divergenz!
+│  WiseMightyPhoenix    2.     1.    │
+│  GrumpyTinyWizard     3.     2.    │
+│  SleepyBraveTroll     4.     4.    │  ← Übereinstimmung
+│  BoldSilverFox        5.     8.    │  ← starke Divergenz
+│  SwiftDarkWolf        6.     5.    │
+│  LazyCrimsonBear      7.     6.    │
+│  CleverTinyOwl        8.     7.    │
+│                                     │
+│  ⚡ 2 starke Abweichungen           │
+│  Peers schätzen Dragon niedriger    │
+│  und Fox deutlich schlechter ein    │
+│  als der Lehrer.                    │
+│                                     │
+│  Starke Abweichungen können als     │
+│  Diskussionsgrundlage dienen —      │
+│  was sehen die Peers anders?        │
+└─────────────────────────────────────┘
+```
+
+Der Vergleich ist rein informativ. Er fließt nicht automatisch in die Benotung ein. Der Lehrer entscheidet, ob und wie er die Peer-Perspektive berücksichtigt.
 
 ---
 

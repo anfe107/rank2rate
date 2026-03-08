@@ -151,3 +151,28 @@ it('R6: ohne Auth → 401', async () => {
     .send(buildGrades())
   expect(res.status).toBe(401)
 })
+
+// R7: note-Feld wird in ratingResult gespeichert
+it('R7: note-Feld wird in ratingResult gespeichert', async () => {
+  await setup()
+  const res = await request(app)
+    .patch(`/api/sessions/${sessionId}/rating`)
+    .set('Authorization', `Bearer ${token}`)
+    .send(buildGrades({ note: 'Klasse insgesamt schwach, Noten angehoben' }))
+
+  expect(res.status).toBe(200)
+  expect(res.body.ratingResult.note).toBe('Klasse insgesamt schwach, Noten angehoben')
+})
+
+// R8: note ist optional — Speichern ohne note funktioniert weiterhin
+it('R8: note ist optional – Speichern ohne note funktioniert', async () => {
+  await setup()
+  const res = await request(app)
+    .patch(`/api/sessions/${sessionId}/rating`)
+    .set('Authorization', `Bearer ${token}`)
+    .send(buildGrades())
+
+  expect(res.status).toBe(200)
+  expect(res.body.ratingResult.note).toBeUndefined()
+  expect(res.body.ratingResult.grades).toHaveLength(3)
+})

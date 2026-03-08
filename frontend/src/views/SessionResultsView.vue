@@ -6,7 +6,7 @@
         ← Session verwalten
       </button>
       <h1 class="font-semibold text-slate-800">
-        {{ phase === 'ranking' ? 'Reihungsergebnis' : phase === 'grading' ? 'Benotung' : 'Benotung abgeschlossen ✓' }}
+        {{ phase === 'ranking' ? 'Reihungsergebnis' : phase === 'grading' ? 'Notenvorschlag' : 'Noten festgelegt ✓' }}
       </h1>
     </header>
 
@@ -21,7 +21,7 @@
         class="py-3 text-sm font-medium border-b-2 transition-colors"
         :class="phase === 'grading' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'"
         @click="session?.groupingResult?.length && (phase = 'grading')"
-      >Benotung</button>
+      >Notenvorschlag</button>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center h-64 text-slate-400">Lädt …</div>
@@ -60,16 +60,35 @@
           </div>
         </div>
 
-        <button
-          data-testid="to-grading"
-          @click="phase = 'grading'"
-          class="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700"
-        >
-          Jetzt benoten →
-        </button>
+        <!-- Zwei gleichwertige Abschlussoptionen -->
+        <div class="space-y-3">
+          <button
+            data-testid="finish-ranking"
+            @click="router.push('/dashboard')"
+            class="w-full bg-white border border-slate-300 text-slate-700 rounded-lg py-2 text-sm font-medium hover:bg-slate-50"
+          >
+            Reihung abschließen
+          </button>
+          <p class="text-xs text-slate-400 text-center -mt-1">Ranking als Ergebnis speichern</p>
+
+          <div class="flex items-center gap-3 text-xs text-slate-400">
+            <span class="flex-1 border-t border-slate-200"></span>
+            <span>oder</span>
+            <span class="flex-1 border-t border-slate-200"></span>
+          </div>
+
+          <button
+            data-testid="to-grading"
+            @click="phase = 'grading'"
+            class="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700"
+          >
+            Noten ableiten →
+          </button>
+          <p class="text-xs text-slate-400 text-center -mt-1">Ranking in Notenvorschläge überführen</p>
+        </div>
       </template>
 
-      <!-- ── Schritt 2: Benotung ── -->
+      <!-- ── Schritt 2: Notenvorschlag ── -->
       <template v-else-if="phase === 'grading'">
         <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
           <div>
@@ -99,7 +118,7 @@
                   class="font-mono text-xs px-2 py-0.5 rounded"
                   :class="entry.isManual ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'"
                 >
-                  Note {{ entry.finalGrade }}
+                  {{ entry.isManual ? `Note: ${entry.finalGrade}` : `Vorschlag: ${entry.finalGrade}` }}
                 </span>
                 <span class="text-slate-700">{{ projectById(entry.projectId)?.displayName }}</span>
                 <span
@@ -121,22 +140,53 @@
           </div>
         </div>
 
+        <!-- Kontextnotiz -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Notiz zur Benotung (optional)</label>
+          <textarea
+            v-model="gradingNote"
+            data-testid="grading-note"
+            placeholder="z.B. &quot;Klasse insgesamt schwach, Noten angehoben&quot;"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
+            rows="2"
+          ></textarea>
+        </div>
+
+        <!-- Reflexionspflicht: Checkbox (nur wenn 0 manuelle Änderungen) -->
+        <label
+          v-if="manualCount === 0"
+          data-testid="confirm-checkbox-label"
+          class="flex items-start gap-2 text-sm text-slate-600 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            v-model="confirmed"
+            data-testid="confirm-checkbox"
+            class="mt-0.5 accent-blue-600"
+          />
+          <span>Ich habe die vorgeschlagene Notenverteilung geprüft und halte sie für angemessen.</span>
+        </label>
+
         <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
         <button
           data-testid="save-rating"
-          :disabled="saving"
+          :disabled="!canSave || saving"
           @click="saveRating"
           class="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-40"
         >
-          {{ saving ? 'Speichern …' : 'Benotung speichern' }}
+          {{ saving ? 'Übernehmen …' : 'Noten übernehmen' }}
         </button>
+        <p
+          v-if="!canSave && !saving"
+          class="text-xs text-slate-400 text-center"
+        >Bitte Notenverteilung prüfen: mindestens eine Note anpassen oder Bestätigung anhaken.</p>
       </template>
 
       <!-- ── Abschlussansicht ── -->
       <template v-else-if="phase === 'done'">
         <div class="bg-white border border-slate-200 rounded-xl p-4">
-          <p class="text-sm text-slate-500 mb-1">
+          <p v-if="manualCount > 0" class="text-sm text-slate-500 mb-1">
             {{ manualCount }} manuell angepasst
           </p>
           <table class="w-full text-sm">
@@ -160,6 +210,24 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Hinweisbox bei 0 manuellen Änderungen -->
+        <div
+          v-if="allGradesUnchanged"
+          data-testid="all-unchanged-hint"
+          class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 flex items-start gap-2"
+        >
+          <span>ℹ</span>
+          <span>Alle Noten entsprechen dem Algorithmus-Vorschlag. Bitte prüfen, ob die Verteilung der Klassenleistung entspricht.</span>
+        </div>
+
+        <!-- Kontextnotiz anzeigen -->
+        <p
+          v-if="savedNote"
+          data-testid="saved-note"
+          class="text-sm text-slate-600 italic"
+        >Notiz: {{ savedNote }}</p>
+
         <button
           @click="router.push('/dashboard')"
           class="w-full bg-slate-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-slate-700"
@@ -200,6 +268,9 @@ const revealedNames = ref({})
 const selectedSystem = ref('schulnoten')
 const manualOverrides = ref({}) // projectId → finalGrade (only when changed)
 const savedGrades = ref([])
+const confirmed = ref(false)
+const gradingNote = ref('')
+const savedNote = ref('')
 
 function projectById(id) {
   return projects.value.find(p => p._id === id)
@@ -229,6 +300,12 @@ const gradePreview = computed(() => {
 })
 
 const manualCount = computed(() => Object.keys(manualOverrides.value).length)
+
+const canSave = computed(() => manualCount.value > 0 || confirmed.value)
+
+const allGradesUnchanged = computed(() =>
+  savedGrades.value.length > 0 && savedGrades.value.every(g => g.computedGrade === g.finalGrade)
+)
 
 function overrideGrade(projectId, value) {
   const sys = GRADE_SYSTEMS[selectedSystem.value].grades
@@ -266,14 +343,23 @@ async function saveRating() {
       computedGrade: e.computedGrade,
       finalGrade: e.finalGrade,
     }))
+    const payload = {
+      gradeSystem: selectedSystem.value,
+      distributionMethod: 'linear',
+      grades,
+    }
+    if (gradingNote.value.trim()) {
+      payload.note = gradingNote.value.trim()
+    }
     const res = await fetch(`/api/sessions/${sessionId}/rating`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...auth.authHeader() },
-      body: JSON.stringify({ gradeSystem: selectedSystem.value, distributionMethod: 'linear', grades }),
+      body: JSON.stringify(payload),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
     savedGrades.value = grades
+    savedNote.value = payload.note || ''
     phase.value = 'done'
   } catch (e) {
     error.value = e.message

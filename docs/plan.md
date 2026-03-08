@@ -120,22 +120,128 @@ Begründung: Die Triangulations-Ansicht (Sprint 3+) benötigt mehrere Methoden p
 - [ ] `SessionResultsView.vue` – Schritt 1: Reihungsergebnis
 - [ ] Drag & Drop: Gruppen-Karten mit zugeordneten Abgaben
 - [ ] Klarnamen-Toggle
-- [ ] Button "Jetzt benoten" → Schritt 2
+- [ ] Zwei gleichwertige Abschlussoptionen:
+  - [ ] Button "Reihung abschließen" — Ranking als Endergebnis, Status bleibt `ranked`
+  - [ ] Button "Noten ableiten →" — Übergang zu Schritt 2
 
 ---
 
-### Frontend – Benotung (Schritt 2)
+### Frontend – Notenvorschlag (Schritt 2, optional)
 
 - [ ] Testszenarien definieren & abgenommen
-- [ ] Tests schreiben (lineare Verteilung, Gleichstandsregel, Vorschau-Logik)
+- [ ] Tests schreiben (lineare Verteilung, Gleichstandsregel, Vorschau-Logik, Reflexionspflicht)
+- [ ] Sprachliche Repositionierung: alle Noten als "Vorschlag" kennzeichnen (Tab "Notenvorschlag", Vorschau zeigt "Vorschlag: X")
 - [ ] Notensystem-Auswahl: Schulnoten 1–6, Abiturpunkte 0–15, A–F, Prozent
 - [ ] Verteilungsmethode: linear
 - [ ] Live-Vorschau: Notenverteilung aktualisiert sich sofort bei Auswahländerung
 - [ ] Gleichstände an Notengrenzen: automatisch bessere Note
 - [ ] Jede Note individuell überschreibbar (Feintuning per Klick/Dropdown)
 - [ ] Manuell geänderte Noten visuell markieren (abweichender Farbton)
-- [ ] Ergebnis speichern (`PATCH /rating`) — speichert berechnete und finale Note pro Abgabe
+- [ ] Reflexionspflicht: Speichern-Button erst aktiv wenn Lehrer entweder (a) mind. 1 Note manuell geändert hat ODER (b) Bestätigungs-Checkbox angehakt hat ("Ich habe die vorgeschlagene Notenverteilung geprüft und halte sie für angemessen.")
+- [ ] Optionale Kontextnotiz: Freitextfeld vor dem Speichern (z.B. "Klasse insgesamt schwach, Noten angehoben"), gespeichert in `ratingResult.note`
+- [ ] Ergebnis speichern (`PATCH /rating`) — speichert berechnete Note, finale Note und optionale Notiz pro Session
 - [ ] Finale Ansicht: Tabelle Abgabe → Note (mit Markierung bei manuellen Änderungen)
+- [ ] Hinweisbox in Abschlussansicht: wenn 0 Noten manuell geändert wurden, dezenter Hinweis ("Alle Noten entsprechen dem Algorithmus-Vorschlag. Bitte prüfen, ob die Verteilung der Klassenleistung entspricht.")
+
+---
+
+## Sprint 1a-Nacharbeit: Vorschlagscharakter & Reflexionspflicht
+
+> Hintergrund: [`docs/anregung.md`](anregung.md). Die Sprint-1a-Implementierung ist funktional vollständig, aber das UI behandelt den Übergang Ranking → Rating zu passiv. Die folgenden Änderungen stellen den Vorschlagscharakter der algorithmischen Benotung sicher und verhindern unreflektiertes Übernehmen.
+>
+> **Umfang**: Kein Neustart — alle Änderungen sind Anpassungen an bestehendem Code. Hauptsächlich betroffen: `SessionResultsView.vue` (~287 Zeilen), punktuell `DashboardView.vue` und `backend/controllers/rating.js`.
+
+### 1. Sprachliche Repositionierung (SessionResultsView.vue)
+
+Alle UI-Texte im Benotungsflow ersetzen. Referenz: Wireframes in `docs/ui-views.md` (Schritt 2 — Notenvorschlag).
+
+- [x] Tab-Label: „Benotung" → **„Notenvorschlag"**
+- [x] Heading (Phase grading): „Benotung" → **„Notenvorschlag"**
+- [x] Button Schritt 1→2: „Jetzt benoten →" → **„Noten ableiten →"**
+- [x] Noten-Label in Vorschau: „Note X" → **„Vorschlag: X"** (für algorithmisch berechnete Noten)
+- [x] Manuell geänderte Noten: Label wechselt zu **„Note: X"** (ohne „Vorschlag")
+- [x] Speichern-Button: „Benotung speichern" → **„Noten übernehmen"**
+- [x] Loading-Text des Speichern-Buttons: „Speichern …" → **„Übernehmen …"**
+- [x] Abschluss-Heading (Phase done): „Benotung abgeschlossen ✓" → **„Noten festgelegt ✓"**
+
+### 2. Sprachliche Repositionierung (DashboardView.vue)
+
+- [x] Status-Label für `graded`: „Benotet" → **„Noten festgelegt"**
+
+### 3. Ranking als eigenständiges Endergebnis (SessionResultsView.vue)
+
+Schritt 1 (Reihungsergebnis) bekommt eine zweite Abschlussoption. Der Lehrer kann bewusst beim Ranking bleiben.
+
+- [x] Button **„Reihung abschließen"** ergänzen (neben „Noten ableiten →")
+  - Visuell: `slate-600` oder `white`-Variante (sekundär), Erklärungstext darunter: „Ranking als Ergebnis speichern"
+  - Aktion: Kein API-Call nötig (Status ist bereits `ranked`), Navigation zurück zum Dashboard
+- [x] Visuelle Trennung: „── oder ──" zwischen den beiden Optionen
+- [x] „Noten ableiten →" bekommt Erklärungstext: „Ranking in Notenvorschläge überführen"
+
+### 4. Reflexionspflicht vor dem Speichern (SessionResultsView.vue)
+
+Der Speichern-Button („Noten übernehmen") ist disabled, bis der Lehrer aktiv reflektiert hat.
+
+- [x] Neue `ref`: `confirmed = ref(false)` — Zustand der Bestätigungs-Checkbox
+- [x] Checkbox im Template (unterhalb der Vorschau, oberhalb des Speichern-Buttons):
+  - Text: **„Ich habe die vorgeschlagene Notenverteilung geprüft und halte sie für angemessen."**
+  - Nur sichtbar, wenn `Object.keys(manualOverrides).length === 0` (keine manuelle Änderung)
+  - Wenn mindestens 1 Note manuell geändert wurde: Checkbox ausblenden (manuelle Änderung = implizite Reflexion)
+- [x] Computed `canSave`: `Object.keys(manualOverrides).length > 0 || confirmed.value`
+- [x] Speichern-Button: `:disabled="!canSave || saving"` (bisher nur `saving`)
+- [x] Visueller Hinweis bei disabled: Tooltip oder Hilfstext „Bitte Notenverteilung prüfen oder bestätigen"
+
+### 5. Optionale Kontextnotiz (SessionResultsView.vue + Backend)
+
+Freitextfeld für Anmerkungen zur Benotung. Wird im `ratingResult` gespeichert.
+
+**Frontend (SessionResultsView.vue):**
+- [x] Neue `ref`: `gradingNote = ref('')`
+- [x] Textarea im Template (oberhalb der Checkbox / des Speichern-Buttons):
+  - Label: **„Notiz zur Benotung (optional)"**
+  - Placeholder: `z.B. "Klasse insgesamt schwach, Noten angehoben"`
+  - Tailwind: `w-full border rounded p-2 text-sm`, max. 3 Zeilen
+- [x] `gradingNote.value` im `saveRating()`-Payload mitsenden: `note: gradingNote.value || undefined`
+- [x] Abschlussansicht (Phase done): Notiz anzeigen, wenn vorhanden (unterhalb der Ergebnistabelle, kursiv, `text-slate-600`)
+
+**Backend (controllers/rating.js):**
+- [x] `note` aus `req.body` entgegennehmen (optional, String)
+- [x] In `ratingResult` speichern: `{ gradeSystem, distributionMethod, grades, note }`
+- [x] Kein Schema-Update nötig (`ratingResult` ist `Mixed`)
+
+### 6. Hinweisbox bei 0 manuellen Änderungen (SessionResultsView.vue)
+
+In der Abschlussansicht (Phase done) erscheint ein Hinweis, wenn der Lehrer keine einzige Note geändert hat.
+
+- [x] Bedingung: `savedGrades.every(g => g.computedGrade === g.finalGrade)` (oder `.every(g => !g.manuallyChanged)`, je nach Datenstruktur)
+- [x] Info-Box im Template (unterhalb der Ergebnistabelle, nur bei 0 Änderungen):
+  - Tailwind: `bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800`
+  - Icon: ℹ
+  - Text: **„Alle Noten entsprechen dem Algorithmus-Vorschlag. Bitte prüfen, ob die Verteilung der Klassenleistung entspricht."**
+- [x] Nicht sichtbar, wenn mindestens 1 Note abweicht (dann erscheint stattdessen der bestehende „✎ = manuell angepasst"-Zähler)
+
+### 7. Tests anpassen (frontend/tests/results.test.js)
+
+- [x] Bestehende String-Assertions aktualisieren:
+  - „Jetzt benoten" → „Noten ableiten"
+  - „Benotung speichern" → „Noten übernehmen"
+  - „Benotung" (Tab/Heading) → „Notenvorschlag"
+  - „Benotung abgeschlossen" → „Noten festgelegt"
+  - „Note X" → „Vorschlag: X" (in Vorschau-Assertions)
+- [x] Neuer Test: Speichern-Button ist disabled ohne Checkbox und ohne manuelle Änderung (RV12)
+- [x] Neuer Test: Speichern-Button wird aktiv nach Checkbox-Klick (RV13)
+- [x] Neuer Test: Speichern-Button wird aktiv nach manueller Notenänderung (Checkbox nicht nötig) (RV14)
+- [x] Neuer Test: Checkbox verschwindet nach manueller Notenänderung (RV15)
+- [x] Neuer Test: Kontextnotiz wird im API-Payload mitgesendet (RV16)
+- [x] Neuer Test: Hinweisbox erscheint in Abschlussansicht bei 0 manuellen Änderungen (RV18)
+- [x] Neuer Test: Hinweisbox erscheint NICHT bei ≥1 manueller Änderung (RV19)
+- [x] Neuer Test: Button „Reihung abschließen" ist sichtbar in Schritt 1 (RV20)
+- [x] Neuer Test: Kontextnotiz wird in Abschlussansicht angezeigt (wenn vorhanden) (RV17)
+
+### 8. Backend-Test anpassen (backend/tests/rating.test.js)
+
+- [x] Neuer Test: `note`-Feld wird in `ratingResult` gespeichert (R7)
+- [x] Neuer Test: `note` ist optional — Speichern ohne `note` funktioniert weiterhin (R8)
 
 ---
 
@@ -237,10 +343,17 @@ Begründung: Die Triangulations-Ansicht (Sprint 3+) benötigt mehrere Methoden p
 - [ ] Fortschrittsanzeige im Lehrer-Dashboard: "X von Y Schülern haben abgestimmt"
 - [ ] Polling alle 2 Sekunden gegen `GET /api/sessions/:id/status`
 
+### Frontend – Perspektivenvergleich Lehrer/Peers
+
+- [ ] Divergenz-Ansicht in `SessionResultsView.vue`: Lehrer-Ranking neben Peer-Ranking
+- [ ] Starke Abweichungen hervorheben (z.B. "Peers schätzen Dragon niedriger ein als der Lehrer")
+- [ ] Pädagogischer Fokus: Perspektivenvergleich als Diskussionsgrundlage, nicht als Korrektur
+
 ### Frontend – CSV-Export
 
-- [ ] Ergebnisse (Abgabe, Rang, Note) als CSV exportieren
+- [ ] Ergebnisse (Abgabe, Rang, optional Note) als CSV exportieren
 - [ ] Klarnamen in CSV (nicht Fantasy-Namen)
+- [ ] Export auch ohne Benotung möglich (nur Ranking)
 
 ---
 
@@ -248,6 +361,7 @@ Begründung: Die Triangulations-Ansicht (Sprint 3+) benötigt mehrere Methoden p
 
 - [ ] Kategorien-Bewertung (Slider pro Kriterium, Gewichtung, anpassbare Kategorien)
 - [ ] Triangulations-Ansicht (mehrere Reihungen nebeneinander vergleichen) — Konzept und Szenarien: [`docs/triangulation.md`](triangulation.md)
+- [ ] Kollegiale Peer-Review (Multi-Evaluator): Session-Ersteller lädt 1–3 Kolleg\*innen per Link ein, jede\*r reiht unabhängig, Ergebnis: Übereinstimmungsmatrix
 - [ ] WebSockets (Echtzeit statt Polling)
 - [ ] PIN-Code-Schutz für Sessions
 - [ ] Visualisierungen (Podest-Ansicht, Heatmap)

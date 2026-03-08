@@ -43,7 +43,7 @@ mongosh --eval "db.adminCommand('ping')"
 
 ```bash
 cd backend
-node --watch server.js
+npm run dev
 ```
 
 Erwartete Ausgabe:
@@ -81,7 +81,7 @@ Zwischen Testläufen oder bei unerwartetem Zustand die Datenbank zurücksetzen.
 mongosh rank2rate --eval "db.dropDatabase()"
 ```
 
-Danach Backend-Terminal kurz neu starten (Ctrl+C → `node --watch server.js`), damit Mongoose-Indizes neu angelegt werden.
+Danach Backend-Terminal kurz neu starten (Ctrl+C → `npm run dev`), damit Mongoose-Indizes neu angelegt werden.
 
 ### Option B – Einzelne Collections leeren (ohne Nutzer zu verlieren)
 

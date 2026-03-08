@@ -48,8 +48,9 @@ Ein interaktives Web-Tool, das die Bewertung von Schülerabgaben durch relative 
 
 ### Anwendungsfälle
 
-- **Lehrer alleine**: Reihung von 3–15 Abgaben + Benotung (Kernfall)
-- **Lehrer + Klasse**: Schüler liefern per QR-Code ihren Reihungs-Beitrag (Dot Voting), Lehrer benotet danach
+- **Lehrer alleine**: Reihung von 3–15 Abgaben, optional Benotung (Kernfall)
+- **Lehrer + Klasse**: Schüler liefern per QR-Code ihren Reihungs-Beitrag (Dot Voting), Lehrer benotet optional danach. Perspektivenvergleich Lehrer/Peers als Diskussionsgrundlage.
+- **Kollegiale Einschätzung** *(Sprint 3+)*: Mehrere Kolleg\*innen reihen dasselbe Set unabhängig. Ergebnis: Übereinstimmungsmatrix — wo sind sich alle einig, wo gehen die Einschätzungen auseinander? Echte Triangulation auf der Evaluator-Achse.
 - **Selbstreflexion** *(sehr optionale Erweiterung, eigener Scope)*: Schüler priorisieren eigene Ideen per Paarvergleich — nutzt nur Phase 1, keine Benotung, benötigt eigenes Auth-Modell
 
 ---
@@ -77,7 +78,8 @@ Ausführliche Persona-Profile: → [`docs/personas.md`](docs/personas.md)
 | UC2: Detaillierte Lehrerbewertung *(Sprint 3+)* | P1 | Kategorien-Bewertung + Paarvergleiche | 1 (Lehrer) |
 | UC3: Peer-Review (Lehrer-initiiert) *(Sprint 2)* | P2 + P3 | Dot Voting | 1 Lehrer + 15–30 Schüler |
 | UC4: Hybride Bewertung *(Sprint 3+)* | P1 + P2 + P3 | Schüler-Vote + Lehrer-Bewertung | 1 Lehrer + Schüler |
-| UC5: Selbstreflexion *(sehr optionaler Scope, kein Sprint geplant)* | P4 | Paarvergleiche | 1 (Schüler) |
+| UC5: Kollegiale Einschätzung *(Sprint 3+)* | P1 + P2 | Multi-Evaluator-Reihung | 2–4 Lehrer |
+| UC6: Selbstreflexion *(sehr optionaler Scope, kein Sprint geplant)* | P4 | Paarvergleiche | 1 (Schüler) |
 
 ---
 
@@ -172,7 +174,7 @@ Der Lehrer entscheidet, ob Schüler bei einer anonymisierten Session Klarnamen s
 
 Vollständige Wireframes: [`docs/ui-views.md` (SessionResultsView)](docs/ui-views.md)
 
-Die Ergebnisansicht gliedert sich in zwei Schritte, entsprechend dem zweiphasigen Prozess.
+Die Ergebnisansicht bietet zwei Wege nach abgeschlossener Reihung.
 
 **Schritt 1 – Reihungsergebnis** (nach gespeicherter Reihung):
 - Zugang wird erst angeboten, nachdem eine Reihung gespeichert wurde (kein leerer Zustand)
@@ -180,14 +182,19 @@ Die Ergebnisansicht gliedert sich in zwei Schritte, entsprechend dem zweiphasige
   - **Drag & Drop**: Gruppen-Karten mit zugeordneten Abgaben
   - **Paarweiser Vergleich**: Rangliste nach Punkten (Rang, Abgabe, Punkte)
 - Anonymisierungs-Toggle (Klarnamen ein-/ausblenden) verfügbar
-- Button „Jetzt benoten" führt zu Schritt 2
+- **Zwei gleichwertige Abschlussoptionen:**
+  - **„Reihung abschließen"**: Das Ranking ist das Endergebnis — keine Benotung. Sinnvoll für formative Bewertung, Feedback-Runden, Präsentationsreihenfolgen. Status bleibt `ranked`.
+  - **„Noten ableiten →"**: Übergang zu Schritt 2 (Benotung). Die Formulierung betont den abgeleiteten, konstruierten Charakter der Notenberechnung.
 
-**Schritt 2 – Benotung** (nach Reihung):
+**Schritt 2 – Notenvorschlag** (nach Reihung, optional):
 - Lehrer wählt Notensystem (z.B. Schulnoten 1–6, Abiturpunkte 0–15, A–F)
 - Lehrer wählt Verteilungsmethode (Sprint 1: linear; Sprint 2: gaußverteilt)
-- Vorschau zeigt sofort die resultierende Notenverteilung
+- Vorschau zeigt sofort die resultierende Notenverteilung — alle Noten sind als **Vorschlag** gekennzeichnet
 - Gleichstände an Notengrenzen: alle erhalten standardmäßig die bessere Note
 - **Die algorithmisch ermittelte Note ist immer nur ein Vorschlag.** Der Lehrer kann jede einzelne Note individuell überschreiben (Feintuning). Geänderte Noten werden visuell markiert (z.B. anderer Farbton), damit die Abweichung vom Vorschlag erkennbar bleibt.
+- **Reflexionspflicht vor dem Speichern:** Der Lehrer muss entweder mindestens eine Note manuell anpassen **oder** explizit bestätigen, dass er den Vorschlag geprüft hat (Checkbox). Passives Durchklicken wird verhindert.
+- **Optionale Kontextnotiz:** Freitextfeld für Anmerkungen zur Benotung (z.B. „Klasse insgesamt schwach, Noten angehoben"). Wird im `ratingResult.note` gespeichert.
+- **Hinweisbox bei 0 manuellen Änderungen:** Nach dem Speichern erscheint ein Info-Hinweis, wenn alle Noten dem Algorithmus-Vorschlag entsprechen.
 - Benotungsergebnis wird separat gespeichert (`ratingResult`)
 - Sprint 3+: Präsentations-Modus (Vollbild, beameroptimiert)
 
@@ -204,9 +211,13 @@ Durch die Anwendung eines oder mehrerer vergleichender Verfahren (Paarvergleich,
 - erlaubt **Gleichstände** — z.B. `a, b, c, c, d, e, e, e, f`
 - ist das Ergebnis der Reihungsphase und Ausgangspunkt für die Benotungsphase
 
-#### Phase 2: Benotung (Rating) — ausschließlich Lehrer
+**Reihung als Endprodukt:** Die Reihung kann auch ohne anschließende Benotung als eigenständiges Ergebnis gespeichert und exportiert werden (Status `ranked` als Endzustand). Anwendungsfälle: formative Bewertung, Feedback-Runden, Präsentationsreihenfolge, Selbstreflexion.
 
-**Die Benotungsphase ist dem Lehrer vorbehalten.** Schüler nehmen an der Reihungsphase teil (via Peer-Review), haben aber keinen Zugang zur Benotung. Technisch: alle Benotungs-Endpunkte erfordern JWT-Auth (Lehrer-Account), die `StudentSessionView` hat keinen Zugang zu Benotungsfunktionen.
+#### Phase 2: Benotung (Rating) — optional, ausschließlich Lehrer
+
+**Die Benotungsphase ist dem Lehrer vorbehalten und optional.** Schüler nehmen an der Reihungsphase teil (via Peer-Review), haben aber keinen Zugang zur Benotung. Technisch: alle Benotungs-Endpunkte erfordern JWT-Auth (Lehrer-Account), die `StudentSessionView` hat keinen Zugang zu Benotungsfunktionen.
+
+**Messtheoretischer Hinweis:** Die Ableitung absoluter Noten aus einem relativen Ranking (soziale → sachliche Bezugsnorm) ist ein Kategoriensprung. Das Tool adressiert dies durch: (1) konsequente Kennzeichnung aller Noten als „Vorschlag", (2) Reflexionspflicht vor dem Speichern, (3) die Möglichkeit, beim Ranking zu verbleiben. Siehe [`docs/anregung.md`](docs/anregung.md).
 
 Aus der Rangfolge wird eine Note abgeleitet. Der Lehrer wählt dafür:
 
@@ -307,8 +318,11 @@ Detailbeschreibungen mit UI-Skizzen und Algorithmus-Details: [`docs/verfahren.md
 - **US-1.2b**: Als Lehrerin möchte ich entscheiden können, ob Schüler Klarnamen sehen dürfen (z.B. nach Abschluss der Bewertung für die Ergebnispräsentation).
 - **US-1.3**: Als Lehrerin möchte ich Abgaben per Drag & Drop in Gruppen sortieren.
 - **US-1.4**: Als Lehrerin möchte ich Abgaben paarweise vergleichen.
-- **US-1.5**: Als Lehrerin möchte ich nach der Reihung ein Notensystem und eine Verteilungsmethode wählen, um die Rangfolge automatisch in Noten zu überführen.
+- **US-1.4a**: Als Lehrerin möchte ich die Reihung als eigenständiges Ergebnis abschließen können, ohne Noten abzuleiten.
+- **US-1.5**: Als Lehrerin möchte ich nach der Reihung optional ein Notensystem und eine Verteilungsmethode wählen, um die Rangfolge in Notenvorschläge zu überführen.
 - **US-1.5a**: Als Lehrerin möchte ich jede einzelne algorithmisch vorgeschlagene Note individuell überschreiben können (Feintuning), und manuell geänderte Noten sollen visuell als solche erkennbar sein.
+- **US-1.5b**: Als Lehrerin möchte ich vor dem Speichern der Noten aktiv bestätigen, dass ich die Vorschläge geprüft habe — oder mindestens eine Note manuell anpassen.
+- **US-1.5c**: Als Lehrerin möchte ich eine optionale Notiz zur Benotung hinterlegen können (z.B. „Klasse insgesamt schwach, Noten angehoben"), die im Ergebnis gespeichert wird.
 - **US-1.6** *(Sprint 2)*: Als Lehrerin möchte ich Ergebnisse als CSV exportieren.
 
 ### 5.2 Lehrperson (Session-Initiator)
@@ -327,7 +341,7 @@ Detailbeschreibungen mit UI-Skizzen und Algorithmus-Details: [`docs/verfahren.md
 
 ### 5.4 Priorisierung
 
-- **Sprint 1 (MVP)**: US-1.1–1.5a (Einzelbewertung Lehrer: Abgaben, Reihung, Benotung)
+- **Sprint 1 (MVP)**: US-1.1–1.5c (Einzelbewertung Lehrer: Abgaben, Reihung, optionale Benotung mit Reflexionspflicht)
 - **Sprint 2**: US-1.6 (CSV-Export), US-2.1–2.4 (Peer-Review), US-3.1–3.4 (Schüler)
 - **Sprint 3+**: Triangulations-Ansicht, Echtzeit-Updates
 - **Sehr optionaler Scope (kein Sprint geplant)**: Selbstreflexion — nutzt nur Phase 1, benötigt eigenes Auth-Modell, abweichendes UX-Konzept
@@ -352,7 +366,7 @@ Detailbeschreibungen mit UI-Skizzen und Algorithmus-Details: [`docs/verfahren.md
   status:          String (enum: draft | active | ranked | graded, default: draft),
   groupingResult:  Mixed | null,   // Array von { label, projectIds[] } nach Drag & Drop
   pairwiseResult:  Mixed | null,   // { comparisons[], ranking[] } nach Paarvergleich
-  ratingResult:    Mixed | null,   // { gradeSystem, distributionMethod, grades: [{ projectId, computedGrade, finalGrade }] } nach Benotung
+  ratingResult:    Mixed | null,   // { gradeSystem, distributionMethod, grades: [{ projectId, computedGrade, finalGrade }], note?: String } nach Benotung
   expiresAt:       Date (default: now + 7 Tage),  // TTL-Index → automatische Löschung
   createdAt:       Date,
   updatedAt:       Date
@@ -497,11 +511,12 @@ Detaillierter Implementierungsplan mit Checkboxen: [`docs/plan.md`](docs/plan.md
 | QR-Code-Workflow & Session-Management | offen |
 | Live-Dashboard (Abstimmungsfortschritt) | offen |
 | Benotung: Gaußverteilung | offen |
-| CSV-Export | offen |
+| Perspektivenvergleich Lehrer/Peers (Divergenz-Ansicht) | offen |
+| CSV-Export (Ranking und/oder Noten) | offen |
 
 ### Sprint 3+
 
-Kategorien-Bewertung, Triangulations-Ansicht, WebSockets, PIN-Code-Schutz, Visualisierungen (Podest, Heatmap), Hybride Bewertung, PDF-Export, Session-Templates, Bradley-Terry-Algorithmus, Präsentations-Modus, Dark Mode, Multi-Language
+Kategorien-Bewertung, Triangulations-Ansicht, Kollegiale Peer-Review (Multi-Evaluator), WebSockets, PIN-Code-Schutz, Visualisierungen (Podest, Heatmap), Hybride Bewertung, PDF-Export, Session-Templates, Bradley-Terry-Algorithmus, Präsentations-Modus, Dark Mode, Multi-Language
 
 ---
 
@@ -534,3 +549,4 @@ Kategorien-Bewertung, Triangulations-Ansicht, WebSockets, PIN-Code-Schutz, Visua
 | 2026-03-06 | 1.3 | Abschnitt 4 (Verfahren-Details) nach docs/verfahren.md ausgelagert. Falsche stack.md-Referenz in Abschnitt 7 entfernt. Doppelte mongodbMemoryServer-Versionsnotiz aus Abschnitt 9 entfernt (steht in stack.md). QR-Code client/serverseitig als offene Frage eingetragen. |
 | 2026-03-06 | 1.4 | Abschnitt 7 (API-Endpoints + Frontend-Routen) nach docs/routen-api.md ausgelagert. stack.md und personas.md nach docs/ verschoben, Referenzen aktualisiert. |
 | 2026-03-07 | 1.5 | Glossar erweitert (Gleichstand, Triangulation, Konfidenz, Divergenz, Konsistenz/Inkonsistenz). Normalisierung als Verfahren entfernt (passt nicht zum Zweiphasen-Modell). Session-Status-Enum: draft\|active\|ranked\|graded. ratingResult.grades um computedGrade/finalGrade erweitert. teacherId-Referenz korrigiert (→ users). UC1 "Kalibrierung" → "Paarvergleich". QR-Code-Frage entschieden (clientseitig). entscheidungen.md-Referenz entfernt. |
+| 2026-03-08 | 1.6 | Vorschlagscharakter und Reflexionspflicht: Benotung als optional positioniert, Reihung als eigenständiges Endergebnis (Status `ranked` als Endzustand). Sprachliche Repositionierung im gesamten UI (Vorschlag statt Note, Noten ableiten statt Jetzt benoten). Reflexionspflicht vor Speichern (Checkbox oder manuelle Änderung). Kontextnotiz in `ratingResult.note`. Hinweisbox bei 0 manuellen Änderungen. Perspektivenvergleich Lehrer/Peers (Sprint 2). Kollegiale Peer-Review als UC5 und Sprint 3+ Feature. User Stories US-1.4a, US-1.5b, US-1.5c ergänzt. Siehe `docs/anregung.md`. |

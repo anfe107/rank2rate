@@ -20,7 +20,7 @@ Vollständige Wireframes aller Views: [`docs/ui-views.md`](ui-views.md)
 
 **Navigation Guard**: Nicht eingeloggte Nutzer werden von Auth-Routen auf `/login` weitergeleitet.
 
-**Offene Designfrage – Benotungsroute**: `/sessions/:id/results` deckt laut Konzept (3.4) zwei Schritte ab: Reihungs-Ergebnis (Schritt 1) und Benotung (Schritt 2). Ob Schritt 2 eine eigene Route `/sessions/:id/rating` bekommt oder intern in der ResultsView bleibt, ist noch nicht entschieden.
+**Entschieden**: `/sessions/:id/results` deckt beide Schritte ab: Reihungs-Ergebnis (Schritt 1) und optionalen Notenvorschlag (Schritt 2). Kein eigener Pfad für die Benotung. Die Reihung kann als eigenständiges Ergebnis abgeschlossen werden (Status `ranked` als Endzustand).
 
 ---
 
@@ -50,7 +50,7 @@ Vollständige Wireframes aller Views: [`docs/ui-views.md`](ui-views.md)
 |---|---|---|
 | PATCH | `/api/sessions/:id/grouping` | Drag & Drop Ergebnis speichern |
 | PATCH | `/api/sessions/:id/pairwise-result` | Paarvergleich-Ergebnis speichern |
-| PATCH | `/api/sessions/:id/rating` | Benotungs-Ergebnis speichern (Notensystem, Verteilung, Notenverteilung) |
+| PATCH | `/api/sessions/:id/rating` | Notenvorschlag speichern (Notensystem, Verteilung, Notenverteilung, optionale Kontextnotiz) |
 
 ### Peer-Review (Sprint 2)
 

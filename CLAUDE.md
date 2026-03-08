@@ -7,7 +7,7 @@ Projektkontext für Claude. Immer lesen bevor Code geschrieben wird.
 ## Was ist rank2rate?
 
 Agiles Bewertungssystem für Schülerabgaben (3–15 Stück) an Berufskollegs.
-Kernprozess **zweiphasig**: **Reihung** (relative Verfahren erzeugen Rangfolge) → **Benotung** (Rangfolge wird in Notensystem überführt).
+Kernprozess **zweiphasig**: **Reihung** (relative Verfahren erzeugen Rangfolge) → optional **Benotung** (Rangfolge wird in Notenvorschläge überführt). Die Reihung kann auch eigenständiges Endergebnis sein.
 
 Primäres Werkzeug für **Lehrer**. Schüler sind Peer-Review-Teilnehmer (Reihung only, Sprint 2+) — kein Zugang zur Benotungsphase.
 
@@ -62,8 +62,10 @@ Aktiver Sprint: **1a** (Auth, Session-CRUD, Drag & Drop, Benotung). Details: [`d
 
 ### Architekturentscheidungen
 
-- **Benotung ist ausschließlich dem Lehrer vorbehalten.** Schüler nehmen nur an der Reihungsphase teil (Peer-Review via `StudentSessionView`). Die `StudentSessionView` hat keinen Zugang zu Benotungsfunktionen. Alle `/rating`-Endpunkte erfordern JWT-Auth.
-- **Die berechnete Note ist immer nur ein Vorschlag.** Der Lehrer kann jede Note individuell überschreiben (Feintuning). Manuell geänderte Noten werden im UI visuell markiert (abweichender Farbton o.ä.), damit die Abweichung vom Algorithmus-Vorschlag sichtbar bleibt. Das `ratingResult` speichert sowohl `computedGrade` als auch `finalGrade` pro Abgabe.
+- **Benotung ist optional und ausschließlich dem Lehrer vorbehalten.** Schüler nehmen nur an der Reihungsphase teil (Peer-Review via `StudentSessionView`). Die `StudentSessionView` hat keinen Zugang zu Benotungsfunktionen. Alle `/rating`-Endpunkte erfordern JWT-Auth. Die Reihung (Status `ranked`) kann als eigenständiges Endergebnis bestehen bleiben.
+- **Die berechnete Note ist immer nur ein Vorschlag.** Das UI kennzeichnet alle algorithmisch ermittelten Noten als „Vorschlag" (nicht als „Note"). Der Lehrer kann jede Note individuell überschreiben (Feintuning). Manuell geänderte Noten werden im UI visuell markiert (abweichender Farbton o.ä.), damit die Abweichung vom Algorithmus-Vorschlag sichtbar bleibt. Das `ratingResult` speichert sowohl `computedGrade` als auch `finalGrade` pro Abgabe, sowie optional eine Kontextnotiz (`note`).
+- **Reflexionspflicht vor dem Speichern der Benotung.** Der Speichern-Button ist erst aktiv, wenn der Lehrer entweder (a) mindestens eine Note manuell geändert hat ODER (b) eine Bestätigungs-Checkbox angehakt hat. Passives Durchklicken wird verhindert.
+- **Sprachliche Konventionen im Benotungs-UI:** „Noten ableiten" (nicht „Jetzt benoten"), Tab „Notenvorschlag" (nicht „Benotung"), „Noten übernehmen" (nicht „Benotung speichern"), „Noten festgelegt" (nicht „Benotung abgeschlossen"), „Vorschlag: X" für algorithmische Noten, „Note: X" für manuell gesetzte.
 - **`utils/grading.js` hat zwei getrennte Funktionen** — eine für Gruppen-Input (Drag & Drop liefert diskrete Qualitätsstufen), eine für Score-Input (Paarvergleich liefert kontinuierliche Punktescores). Niemals in einer gemeinsamen Funktion zusammenführen, da die Eingabestrukturen grundlegend verschieden sind.
 - **Weniger Abgaben als Notenstufen → Standard: von oben beginnen.** Wenn z.B. 4 Abgaben auf Schulnoten 1–6 verteilt werden, erhalten sie standardmäßig die Noten 1–4. Die unteren Noten bleiben unbesetzt.
 - **UI schlägt passendes Notensystem zur Gruppenanzahl vor.** Bei Drag & Drop mit 3 Gruppen wird ein 3-stufiges System vorgeschlagen, bei 5 Gruppen ein 5-stufiges.
@@ -74,7 +76,7 @@ Aktiver Sprint: **1a** (Auth, Session-CRUD, Drag & Drop, Benotung). Details: [`d
 - `actualName` (echter Schülername) wird **AES-256** verschlüsselt — via Mongoose-Middleware in `models/Project.js`, niemals im Klartext speichern
 - TTL-Index auf `sessions.expiresAt` (7 Tage) — kein Cron-Job nötig
 - `mongodbMemoryServer.version` ist auf `"8.0.19"` gepinnt (in `backend/package.json`) — nicht ändern
-- Session-Status: `draft | active | ranked | graded` — Solo-Lehrer überspringt `active`
+- Session-Status: `draft | active | ranked | graded` — Solo-Lehrer überspringt `active`. `ranked` kann Endzustand sein (Ranking ohne Benotung).
 
 ---
 
@@ -110,3 +112,4 @@ Aktiver Sprint: **1a** (Auth, Session-CRUD, Drag & Drop, Benotung). Details: [`d
 
 - **QR-Code**: clientseitig im Frontend (`qrcode`-Paket). Session-URL ist bekannt, kein Server-Roundtrip nötig.
 - **Benotungsroute**: kein eigener Pfad. Benotung bleibt Tab/Schritt innerhalb `SessionResultsView`.
+- **Vorschlagscharakter**: Messtheoretische Einordnung und UI-Konsequenzen dokumentiert in [`docs/anregung.md`](docs/anregung.md).
