@@ -97,6 +97,20 @@ async function setup() {
   projectIds = res.body.projects.map(p => p._id)
 }
 
+// Reihung speichern: 3 Gruppen, je eine Abgabe (Top/Mittelfeld/Unten)
+async function saveGrouping() {
+  await request(app)
+    .patch(`/api/sessions/${sessionId}/grouping`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      groups: [
+        { label: 'Top', projectIds: [projectIds[0]] },
+        { label: 'Mittelfeld', projectIds: [projectIds[1]] },
+        { label: 'Unten', projectIds: [projectIds[2]] },
+      ],
+    })
+}
+
 function buildGrades(override = {}) {
   return {
     gradeSystem: 'schulnoten',
@@ -175,4 +189,75 @@ it('R8: note ist optional – Speichern ohne note funktioniert', async () => {
   expect(res.status).toBe(200)
   expect(res.body.ratingResult.note).toBeUndefined()
   expect(res.body.ratingResult.grades).toHaveLength(3)
+})
+
+// R9: computedGrade wird serverseitig aus der Reihung abgeleitet – manipulierte
+// Client-Werte werden ignoriert (Autoritativität des Servers).
+it('R9: computedGrade wird serverseitig aus groupingResult neu berechnet', async () => {
+  await setup()
+  await saveGrouping()
+  // Client behauptet für alle Abgaben computedGrade 6 (falsch) – finalGrade gültig.
+  const grades = [
+    { projectId: projectIds[0], computedGrade: 6, finalGrade: 1 },
+    { projectId: projectIds[1], computedGrade: 6, finalGrade: 2 },
+    { projectId: projectIds[2], computedGrade: 6, finalGrade: 3 },
+  ]
+  const res = await request(app)
+    .patch(`/api/sessions/${sessionId}/rating`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ gradeSystem: 'schulnoten', distributionMethod: 'linear', grades })
+
+  expect(res.status).toBe(200)
+  const byId = Object.fromEntries(res.body.ratingResult.grades.map(g => [g.projectId, g]))
+  // „Von oben beginnen": 3 Gruppen → 1, 2, 3 (nicht die vom Client gesendeten 6)
+  expect(byId[projectIds[0]].computedGrade).toBe(1)
+  expect(byId[projectIds[1]].computedGrade).toBe(2)
+  expect(byId[projectIds[2]].computedGrade).toBe(3)
+  // finalGrade (manueller Override) bleibt Client-gesteuert
+  expect(byId[projectIds[0]].finalGrade).toBe(1)
+})
+
+// R10: gradeRange wird serverseitig angewendet
+it('R10: gradeRange schränkt die serverseitige Ableitung ein', async () => {
+  await setup()
+  await saveGrouping()
+  const grades = [
+    { projectId: projectIds[0], computedGrade: 2, finalGrade: 2 },
+    { projectId: projectIds[1], computedGrade: 3, finalGrade: 3 },
+    { projectId: projectIds[2], computedGrade: 4, finalGrade: 4 },
+  ]
+  const res = await request(app)
+    .patch(`/api/sessions/${sessionId}/rating`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ gradeSystem: 'schulnoten', distributionMethod: 'linear', grades, gradeRange: { min: 2, max: 4 } })
+
+  expect(res.status).toBe(200)
+  const computed = res.body.ratingResult.grades.map(g => g.computedGrade).sort()
+  expect(computed).toEqual([2, 3, 4])
+})
+
+// R11: ungültige finale Note → 400
+it('R11: ungültige finalGrade wird abgelehnt', async () => {
+  await setup()
+  const res = await request(app)
+    .patch(`/api/sessions/${sessionId}/rating`)
+    .set('Authorization', `Bearer ${token}`)
+    .send(buildGrades({
+      grades: [
+        { projectId: projectIds[0], computedGrade: 1, finalGrade: 1 },
+        { projectId: projectIds[1], computedGrade: 2, finalGrade: 9 }, // 9 gibt es nicht
+        { projectId: projectIds[2], computedGrade: 3, finalGrade: 3 },
+      ],
+    }))
+  expect(res.status).toBe(400)
+})
+
+// R12: unbekanntes Notensystem → 400
+it('R12: unbekanntes gradeSystem wird abgelehnt', async () => {
+  await setup()
+  const res = await request(app)
+    .patch(`/api/sessions/${sessionId}/rating`)
+    .set('Authorization', `Bearer ${token}`)
+    .send(buildGrades({ gradeSystem: 'phantasie' }))
+  expect(res.status).toBe(400)
 })

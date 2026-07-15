@@ -42,15 +42,18 @@
             class="bg-slate-100 rounded-lg px-3 py-2 text-sm text-slate-700 cursor-grab select-none"
           >
             {{ p.displayName }}
-            <span v-if="session?.anonymized && revealedNames[p._id]" class="block text-xs text-slate-500">
-              {{ p.actualName }}
+            <span v-if="session?.anonymized && p.actualName" class="flex items-center gap-1 mt-0.5">
+              <button
+                :data-testid="`toggle-name-${p._id}`"
+                @click="toggleName(p._id)"
+                class="dd-no-drag text-slate-400 hover:text-slate-600"
+              >
+                <component :is="(showAllNames || revealedNames[p._id]) ? EyeOff : Eye" class="w-3 h-3" />
+              </button>
+              <span class="text-xs text-slate-400 min-w-20">
+                {{ (showAllNames || revealedNames[p._id]) ? p.actualName : '••••••••' }}
+              </span>
             </span>
-            <button
-              v-if="session?.anonymized"
-              :data-testid="`toggle-name-${p._id}`"
-              @click="toggleName(p._id)"
-              class="dd-no-drag ml-1 text-slate-400 hover:text-slate-600 text-xs"
-            >👁</button>
           </div>
         </div>
       </div>
@@ -77,15 +80,18 @@
             class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-800 cursor-grab select-none"
           >
             {{ p.displayName }}
-            <span v-if="session?.anonymized && revealedNames[p._id]" class="block text-xs text-blue-600">
-              {{ p.actualName }}
+            <span v-if="session?.anonymized && p.actualName" class="flex items-center gap-1 mt-0.5">
+              <button
+                :data-testid="`toggle-name-${p._id}`"
+                @click="toggleName(p._id)"
+                class="dd-no-drag text-slate-400 hover:text-slate-600"
+              >
+                <component :is="(showAllNames || revealedNames[p._id]) ? EyeOff : Eye" class="w-3 h-3" />
+              </button>
+              <span class="text-xs text-slate-400 min-w-20">
+                {{ (showAllNames || revealedNames[p._id]) ? p.actualName : '••••••••' }}
+              </span>
             </span>
-            <button
-              v-if="session?.anonymized"
-              :data-testid="`toggle-name-${p._id}`"
-              @click="toggleName(p._id)"
-              class="dd-no-drag ml-1 text-blue-400 hover:text-blue-600 text-xs"
-            >👁</button>
           </div>
         </div>
       </div>
@@ -117,6 +123,7 @@ import { ref, shallowRef, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import Sortable from 'sortablejs'
+import { Eye, EyeOff } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()

@@ -5,6 +5,17 @@ Detaillierter Implementierungsplan mit Checkboxen.
 
 ---
 
+## Realer Stand (Stand 15.07.2026, gegen Code verifiziert)
+
+> Die Checkboxen weiter unten sind teils historisch und nicht durchgängig gepflegt. Maßgeblich ist diese Übersicht.
+
+- **Sprint 1a: abgeschlossen.** Auth, Session-CRUD, Drag & Drop, Benotung inkl. Vorschlagscharakter/Reflexionspflicht/Kontextnotiz. Backend 33 Tests grün, Frontend 39 Tests grün.
+- **Sprint 1b: teilweise vorgezogen.** Fertig: `DashboardView` + `GET /api/sessions`. **Offen (nächster Schritt): Paarweiser Vergleich** — `PairwiseEvaluateView.vue`, Route `/sessions/:id/pairwise`, `PATCH /api/sessions/:id/pairwise-result`, Ergänzung der Paarvergleich-Rangliste in `SessionResultsView`. Ebenfalls offen: SessionManageView-Vollausbau (Bearbeiten/Löschen).
+- **Behoben 15.07.2026:** Notenableitung folgte im Frontend nicht der Regel „von oben beginnen" (roter Test RV10). Frontend `computeGrades` und Backend `gradeFromGroups` sind jetzt logisch identisch; `saveRating` leitet `computedGrade` serverseitig autoritativ aus der Reihung ab und validiert gegen `backend/utils/gradeSystems.js`.
+- **Bekannte Doku-Drift (offen, nicht kritisch):** `Session`-Modell weicht von `konzept.md` Abschnitt 6 ab (flaches `groupCount` statt `settings.groupCount`, kein `revealNamesForStudents`, kein `updatedAt`). Erst angehen, wenn ein Feature diese Felder braucht (Sprint 2).
+
+---
+
 ## Sprint 1a: Echter MVP – ein kompletter Durchlauf (Drag & Drop → Benotung)
 
 > Ziel: Ein Lehrer kann sich einloggen, Abgaben eingeben, per Drag & Drop reihen und benoten.
@@ -132,6 +143,7 @@ Begründung: Die Triangulations-Ansicht (Sprint 3+) benötigt mehrere Methoden p
 - [ ] Tests schreiben (lineare Verteilung, Gleichstandsregel, Vorschau-Logik, Reflexionspflicht)
 - [ ] Sprachliche Repositionierung: alle Noten als "Vorschlag" kennzeichnen (Tab "Notenvorschlag", Vorschau zeigt "Vorschlag: X")
 - [ ] Notensystem-Auswahl: Schulnoten 1–6, Abiturpunkte 0–15, A–F, Prozent
+- [x] Notenbereich einschränkbar: Beste/Schlechteste Note wählbar (z.B. nur 2–4), lineares Mapping auf Gruppenanzahl
 - [ ] Verteilungsmethode: linear
 - [ ] Live-Vorschau: Notenverteilung aktualisiert sich sofort bei Auswahländerung
 - [ ] Gleichstände an Notengrenzen: automatisch bessere Note

@@ -188,6 +188,27 @@
 
 **✓** Vorschau zeigt wieder „Vorschlag: 1", „Vorschlag: 2", „Vorschlag: 3"
 
+### 5.4a Notenbereich einschränken
+
+1. → Notensystem auf **"Schulnoten 1–6"** stellen
+2. → "Beste Note" auf **2** ändern
+3. → "Schlechteste Note" auf **4** ändern
+
+**✓** Vorschau aktualisiert sich sofort
+**✓** Noten zeigen „Vorschlag: 2", „Vorschlag: 3", „Vorschlag: 4" (bei 3 Gruppen)
+**✓** Dropdown "Beste Note" bietet nur Werte ≤ 4 an (nicht schlechter als "Schlechteste Note")
+**✓** Dropdown "Schlechteste Note" bietet nur Werte ≥ 2 an (nicht besser als "Beste Note")
+
+4. → "Beste Note" zurück auf **1 (Standard)**
+5. → "Schlechteste Note" zurück auf **6 (Standard)**
+
+**✓** Vorschau zeigt wieder „Vorschlag: 1", „Vorschlag: 2", „Vorschlag: 3"
+
+6. → Notensystem auf **"A–F"** wechseln
+
+**✓** Beste/Schlechteste Note werden auf Standard zurückgesetzt
+**✓** Vorschau zeigt „Vorschlag: A", „Vorschlag: B", „Vorschlag: C"
+
 ### 5.5 Reflexionspflicht – Speichern ohne Aktion
 
 1. → Ohne etwas zu ändern den „Noten übernehmen"-Button prüfen
@@ -322,6 +343,7 @@ console.log(data.projects[0].actualName)  // verschlüsselter String (Base64:Bas
 | 5.2 | Reihung abschließen (ohne Benotung) | ⬜ |
 | 5.3 | Noten ableiten – Vorschlag-Labels | ⬜ |
 | 5.4 | Notensystem wechseln | ⬜ |
+| 5.4a | Notenbereich einschränken | ⬜ |
 | 5.5 | Reflexionspflicht – Button disabled | ⬜ |
 | 5.6 | Reflexionspflicht – Checkbox | ⬜ |
 | 5.7 | Manuelle Überschreibung + Label-Wechsel | ⬜ |

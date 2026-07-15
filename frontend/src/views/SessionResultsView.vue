@@ -30,6 +30,16 @@
 
       <!-- ── Schritt 1: Reihungsergebnis ── -->
       <template v-if="phase === 'ranking'">
+        <!-- Globaler Klarnamen-Toggle -->
+        <div v-if="session.anonymized" class="flex justify-end">
+          <button
+            @click="showAllNames = !showAllNames"
+            class="text-xs text-slate-500 hover:text-blue-600"
+          >
+            {{ showAllNames ? 'Namen verbergen' : 'Klarnamen anzeigen' }}
+          </button>
+        </div>
+
         <div
           v-for="group in session.groupingResult"
           :key="group.label"
@@ -46,15 +56,17 @@
               class="bg-slate-100 rounded-lg px-3 py-2 text-sm text-slate-700"
             >
               {{ projectById(pid)?.displayName }}
-              <span
-                v-if="session.anonymized && revealedNames[pid]"
-                class="block text-xs text-slate-500"
-              >{{ projectById(pid)?.actualName }}</span>
-              <button
-                v-if="session.anonymized"
-                @click="revealedNames[pid] = !revealedNames[pid]"
-                class="ml-1 text-slate-400 hover:text-slate-600 text-xs"
-              >👁</button>
+              <span v-if="session.anonymized && projectById(pid)?.actualName" class="flex items-center gap-1 mt-0.5">
+                <button
+                  @click="toggleName(pid)"
+                  class="text-slate-400 hover:text-slate-600"
+                >
+                  <component :is="(showAllNames || revealedNames[pid]) ? EyeOff : Eye" class="w-3 h-3" />
+                </button>
+                <span class="text-xs text-slate-400 min-w-20">
+                  {{ (showAllNames || revealedNames[pid]) ? projectById(pid)?.actualName : '••••••••' }}
+                </span>
+              </span>
             </div>
             <span v-if="group.projectIds.length === 0" class="text-sm text-slate-400 italic">leer</span>
           </div>
@@ -91,8 +103,9 @@
       <!-- ── Schritt 2: Notenvorschlag ── -->
       <template v-else-if="phase === 'grading'">
         <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+          <h3 class="text-sm font-semibold text-slate-700">Notenskala</h3>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Notensystem</label>
+            <label class="block text-xs text-slate-500 mb-1">Notensystem</label>
             <select
               v-model="selectedSystem"
               data-testid="grade-system-select"
@@ -101,6 +114,41 @@
               <option v-for="(sys, key) in GRADE_SYSTEMS" :key="key" :value="key">{{ sys.label }}</option>
             </select>
           </div>
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <label class="block text-xs text-slate-500 mb-1">Beste Note</label>
+              <select
+                v-model="gradeMin"
+                data-testid="grade-min-select"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                <option :value="null">{{ currentGrades[0] }} (Standard)</option>
+                <option
+                  v-for="g in currentGrades.slice(0, gradeMax !== null ? currentGrades.indexOf(gradeMax) + 1 : currentGrades.length)"
+                  :key="g"
+                  :value="g"
+                >{{ g }}</option>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs text-slate-500 mb-1">Schlechteste Note</label>
+              <select
+                v-model="gradeMax"
+                data-testid="grade-max-select"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                <option :value="null">{{ currentGrades[currentGrades.length - 1] }} (Standard)</option>
+                <option
+                  v-for="g in currentGrades.slice(gradeMin !== null ? currentGrades.indexOf(gradeMin) : 0)"
+                  :key="g"
+                  :value="g"
+                >{{ g }}</option>
+              </select>
+            </div>
+          </div>
+          <p v-if="effectiveGrades.length < (session?.groupingResult?.length ?? 0)" class="text-xs text-amber-600">
+            Weniger Notenstufen ({{ effectiveGrades.length }}) als Gruppen ({{ session.groupingResult.length }}) — mehrere Gruppen erhalten dieselbe Note.
+          </p>
         </div>
 
         <!-- Vorschau -->
@@ -120,7 +168,20 @@
                 >
                   {{ entry.isManual ? `Note: ${entry.finalGrade}` : `Vorschlag: ${entry.finalGrade}` }}
                 </span>
-                <span class="text-slate-700">{{ projectById(entry.projectId)?.displayName }}</span>
+                <span class="text-slate-700">
+                  {{ projectById(entry.projectId)?.displayName }}
+                  <span v-if="session.anonymized && projectById(entry.projectId)?.actualName" class="inline-flex items-center gap-1 ml-1">
+                    <button
+                      @click="toggleName(entry.projectId)"
+                      class="text-slate-400 hover:text-slate-600"
+                    >
+                      <component :is="(showAllNames || revealedNames[entry.projectId]) ? EyeOff : Eye" class="w-3 h-3" />
+                    </button>
+                    <span class="text-xs text-slate-400">
+                      {{ (showAllNames || revealedNames[entry.projectId]) ? projectById(entry.projectId)?.actualName : '••••••••' }}
+                    </span>
+                  </span>
+                </span>
                 <span
                   v-if="entry.isManual"
                   :data-testid="`manual-mark-${entry.projectId}`"
@@ -203,7 +264,20 @@
                 :key="entry.projectId"
                 class="border-b border-slate-50"
               >
-                <td class="py-2">{{ projectById(entry.projectId)?.displayName }}</td>
+                <td class="py-2">
+                  {{ projectById(entry.projectId)?.displayName }}
+                  <span v-if="session.anonymized && projectById(entry.projectId)?.actualName" class="inline-flex items-center gap-1 ml-1">
+                    <button
+                      @click="toggleName(entry.projectId)"
+                      class="text-slate-400 hover:text-slate-600"
+                    >
+                      <component :is="(showAllNames || revealedNames[entry.projectId]) ? EyeOff : Eye" class="w-3 h-3" />
+                    </button>
+                    <span class="text-xs text-slate-400">
+                      {{ (showAllNames || revealedNames[entry.projectId]) ? projectById(entry.projectId)?.actualName : '••••••••' }}
+                    </span>
+                  </span>
+                </td>
                 <td class="py-2 font-mono">{{ entry.finalGrade }}</td>
                 <td class="py-2 text-amber-500">{{ entry.finalGrade !== entry.computedGrade ? '✎' : '' }}</td>
               </tr>
@@ -241,9 +315,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { Eye, EyeOff } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -264,23 +339,61 @@ const error = ref('')
 const saving = ref(false)
 const phase = ref('ranking') // 'ranking' | 'grading' | 'done'
 const revealedNames = ref({})
+const showAllNames = ref(false)
+
+function toggleName(id) {
+  revealedNames.value[id] = !revealedNames.value[id]
+}
 
 const selectedSystem = ref('schulnoten')
+const gradeMin = ref(null) // index into current system's grades array
+const gradeMax = ref(null)
 const manualOverrides = ref({}) // projectId → finalGrade (only when changed)
 const savedGrades = ref([])
 const confirmed = ref(false)
 const gradingNote = ref('')
 const savedNote = ref('')
 
+// Available grades for the current system
+const currentGrades = computed(() => GRADE_SYSTEMS[selectedSystem.value].grades)
+
+// Effective grade range (subset of currentGrades based on min/max selection)
+const effectiveGrades = computed(() => {
+  const grades = currentGrades.value
+  const minIdx = gradeMin.value !== null ? grades.indexOf(gradeMin.value) : 0
+  const maxIdx = gradeMax.value !== null ? grades.indexOf(gradeMax.value) : grades.length - 1
+  if (minIdx < 0 || maxIdx < 0 || minIdx > maxIdx) return grades
+  return grades.slice(minIdx, maxIdx + 1)
+})
+
+// Reset min/max and manual overrides when system changes
+watch(selectedSystem, () => {
+  gradeMin.value = null
+  gradeMax.value = null
+  manualOverrides.value = {}
+})
+
+// Reset manual overrides when range changes
+watch([gradeMin, gradeMax], () => {
+  manualOverrides.value = {}
+})
+
 function projectById(id) {
   return projects.value.find(p => p._id === id)
 }
 
-// Lineare Notenverteilung (analog zu backend/utils/grading.js gradeFromGroups)
-function computeGrades(groups, gradeSystem) {
+// Notenverteilung: „von oben beginnen" (CLAUDE.md). Solange genug Notenstufen
+// vorhanden sind, erhält jede Gruppe der Reihe nach eine Note ab der besten;
+// überzählige (schlechtere) Noten bleiben unbesetzt. Nur wenn es mehr Gruppen
+// als Notenstufen gibt, wird linear komprimiert.
+// Muss identisch zu backend/utils/grading.js:gradeFromGroups bleiben.
+function computeGrades(groups, gradeRange) {
+  const n = groups.length
+  const len = gradeRange.length
   const result = []
-  for (let i = 0; i < groups.length; i++) {
-    const grade = gradeSystem[i]
+  for (let i = 0; i < n; i++) {
+    const gradeIndex = n <= len ? i : Math.round((i / (n - 1)) * (len - 1))
+    const grade = gradeRange[gradeIndex]
     for (const projectId of groups[i].projectIds) {
       result.push({ projectId, computedGrade: grade, finalGrade: grade })
     }
@@ -290,8 +403,7 @@ function computeGrades(groups, gradeSystem) {
 
 const gradePreview = computed(() => {
   if (!session.value?.groupingResult) return []
-  const sys = GRADE_SYSTEMS[selectedSystem.value].grades
-  const base = computeGrades(session.value.groupingResult, sys)
+  const base = computeGrades(session.value.groupingResult, effectiveGrades.value)
   return base.map(entry => {
     const override = manualOverrides.value[entry.projectId]
     const finalGrade = override !== undefined ? override : entry.finalGrade
@@ -308,8 +420,7 @@ const allGradesUnchanged = computed(() =>
 )
 
 function overrideGrade(projectId, value) {
-  const sys = GRADE_SYSTEMS[selectedSystem.value].grades
-  const computed_ = computeGrades(session.value.groupingResult, sys).find(e => e.projectId === projectId)
+  const computed_ = computeGrades(session.value.groupingResult, effectiveGrades.value).find(e => e.projectId === projectId)
   // Typkonvertierung: Zahlen bleiben Zahlen
   const parsed = isNaN(Number(value)) ? value : Number(value)
   if (parsed === computed_?.computedGrade) {
@@ -347,6 +458,12 @@ async function saveRating() {
       gradeSystem: selectedSystem.value,
       distributionMethod: 'linear',
       grades,
+    }
+    if (gradeMin.value !== null || gradeMax.value !== null) {
+      payload.gradeRange = {
+        min: gradeMin.value ?? currentGrades.value[0],
+        max: gradeMax.value ?? currentGrades.value[currentGrades.value.length - 1],
+      }
     }
     if (gradingNote.value.trim()) {
       payload.note = gradingNote.value.trim()
